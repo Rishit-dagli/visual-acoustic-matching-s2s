@@ -1,3 +1,5 @@
+This is a fork of the VAM project for See2Sound.
+
 # Visual Acoustic Matching
 
 ## Motivation

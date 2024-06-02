@@ -17,9 +17,18 @@ class VisualNet(nn.Module):
         self.use_audio = use_audio
 
         in_channel = use_rgb * 3 + use_depth + use_audio
-        conv1 = nn.Conv2d(in_channel, 64, kernel_size=(7, 7), stride=(2, 2), padding=(3, 3), bias=False)
+        conv1 = nn.Conv2d(
+            in_channel,
+            64,
+            kernel_size=(7, 7),
+            stride=(2, 2),
+            padding=(3, 3),
+            bias=False,
+        )
         layers = list(torchvision.models.resnet18(pretrained=True).children())[1:-1]
-        self.feature_extraction = nn.Sequential(conv1, *layers)  # features before conv1x1
+        self.feature_extraction = nn.Sequential(
+            conv1, *layers
+        )  # features before conv1x1
         self.predictor = nn.Sequential(nn.Linear(512, 1))
 
     def forward(self, inputs):

@@ -52,22 +52,23 @@ class DecoderRNNT(nn.Module):
         * hidden_states (torch.FloatTensor): A hidden state of decoder. `FloatTensor` of size
             ``(batch, seq_length, dimension)``
     """
+
     supported_rnns = {
-        'lstm': nn.LSTM,
-        'gru': nn.GRU,
-        'rnn': nn.RNN,
+        "lstm": nn.LSTM,
+        "gru": nn.GRU,
+        "rnn": nn.RNN,
     }
 
     def __init__(
-            self,
-            num_classes: int,
-            hidden_state_dim: int,
-            output_dim: int,
-            num_layers: int,
-            rnn_type: str = 'lstm',
-            sos_id: int = 1,
-            eos_id: int = 2,
-            dropout_p: float = 0.2,
+        self,
+        num_classes: int,
+        hidden_state_dim: int,
+        output_dim: int,
+        num_layers: int,
+        rnn_type: str = "lstm",
+        sos_id: int = 1,
+        eos_id: int = 2,
+        dropout_p: float = 0.2,
     ):
         super(DecoderRNNT, self).__init__()
         self.hidden_state_dim = hidden_state_dim
@@ -87,20 +88,20 @@ class DecoderRNNT(nn.Module):
         self.out_proj = Linear(hidden_state_dim, output_dim)
 
     def count_parameters(self) -> int:
-        """ Count parameters of encoder """
+        """Count parameters of encoder"""
         return sum([p.numel for p in self.parameters()])
 
     def update_dropout(self, dropout_p: float) -> None:
-        """ Update dropout probability of encoder """
+        """Update dropout probability of encoder"""
         for name, child in self.named_children():
             if isinstance(child, nn.Dropout):
                 child.p = dropout_p
 
     def forward(
-            self,
-            inputs: Tensor,
-            input_lengths: Tensor = None,
-            hidden_states: Tensor = None,
+        self,
+        inputs: Tensor,
+        input_lengths: Tensor = None,
+        hidden_states: Tensor = None,
     ) -> Tuple[Tensor, Tensor]:
         """
         Forward propage a `inputs` (targets) for training.
@@ -122,7 +123,9 @@ class DecoderRNNT(nn.Module):
         embedded = self.embedding(inputs)
 
         if input_lengths is not None:
-            embedded = nn.utils.rnn.pack_padded_sequence(embedded.transpose(0, 1), input_lengths.cpu())
+            embedded = nn.utils.rnn.pack_padded_sequence(
+                embedded.transpose(0, 1), input_lengths.cpu()
+            )
             outputs, hidden_states = self.rnn(embedded, hidden_states)
             outputs, _ = nn.utils.rnn.pad_packed_sequence(outputs)
             outputs = self.out_proj(outputs.transpose(0, 1))

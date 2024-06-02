@@ -12,6 +12,7 @@ from typing import Tuple
 from vam.conformer.feed_forward import FeedForwardModule
 from vam.conformer.attention import MultiHeadedSelfAttentionModule
 from vam.models.vit import MultiHeadedCrossmodalAttentionModule
+
 # from vam.conformer.attention import MultiHeadedCrossmodalAttentionModule
 from vam.conformer.convolution import (
     ConformerConvModule,
@@ -47,20 +48,21 @@ class ConformerBlock(pl.LightningModule):
     Returns: outputs
         - **outputs** (batch, time, dim): Tensor produces by conformer block.
     """
+
     def __init__(
-            self,
-            encoder_dim: int = 512,
-            num_attention_heads: int = 8,
-            feed_forward_expansion_factor: int = 4,
-            conv_expansion_factor: int = 2,
-            feed_forward_dropout_p: float = 0.1,
-            attention_dropout_p: float = 0.1,
-            crossmodal_dropout_p=0.1,
-            conv_dropout_p: float = 0.1,
-            conv_kernel_size: int = 31,
-            half_step_residual: bool = True,
-            use_crossmodal_layer=False,
-            use_visual_pe=False
+        self,
+        encoder_dim: int = 512,
+        num_attention_heads: int = 8,
+        feed_forward_expansion_factor: int = 4,
+        conv_expansion_factor: int = 2,
+        feed_forward_dropout_p: float = 0.1,
+        attention_dropout_p: float = 0.1,
+        crossmodal_dropout_p=0.1,
+        conv_dropout_p: float = 0.1,
+        conv_kernel_size: int = 31,
+        half_step_residual: bool = True,
+        use_crossmodal_layer=False,
+        use_visual_pe=False,
     ):
         super(ConformerBlock, self).__init__()
         self.use_crossmodal_layer = use_crossmodal_layer
@@ -70,46 +72,56 @@ class ConformerBlock(pl.LightningModule):
             self.feed_forward_residual_factor = 1
 
         modules = []
-        modules.append(ResidualConnectionModule(
-                    module=FeedForwardModule(
-                        encoder_dim=encoder_dim,
-                        expansion_factor=feed_forward_expansion_factor,
-                        dropout_p=feed_forward_dropout_p
-                    ),
-                    module_factor=self.feed_forward_residual_factor,
-                ))
-        modules.append(ResidualConnectionModule(
-                    module=MultiHeadedSelfAttentionModule(
-                        d_model=encoder_dim,
-                        num_heads=num_attention_heads,
-                        dropout_p=attention_dropout_p
-                    ),
-                ))
+        modules.append(
+            ResidualConnectionModule(
+                module=FeedForwardModule(
+                    encoder_dim=encoder_dim,
+                    expansion_factor=feed_forward_expansion_factor,
+                    dropout_p=feed_forward_dropout_p,
+                ),
+                module_factor=self.feed_forward_residual_factor,
+            )
+        )
+        modules.append(
+            ResidualConnectionModule(
+                module=MultiHeadedSelfAttentionModule(
+                    d_model=encoder_dim,
+                    num_heads=num_attention_heads,
+                    dropout_p=attention_dropout_p,
+                ),
+            )
+        )
         if use_crossmodal_layer:
-            modules.append(ResidualConnectionModule(
+            modules.append(
+                ResidualConnectionModule(
                     module=MultiHeadedCrossmodalAttentionModule(
                         d_model=encoder_dim,
                         num_heads=num_attention_heads,
                         dropout_p=crossmodal_dropout_p,
-                        use_visual_pe=use_visual_pe
+                        use_visual_pe=use_visual_pe,
                     ),
-                ))
-        modules.append(ResidualConnectionModule(
+                )
+            )
+        modules.append(
+            ResidualConnectionModule(
                 module=ConformerConvModule(
                     in_channels=encoder_dim,
                     kernel_size=conv_kernel_size,
                     expansion_factor=conv_expansion_factor,
-                    dropout_p=conv_dropout_p
+                    dropout_p=conv_dropout_p,
                 ),
-            ))
-        modules.append(ResidualConnectionModule(
-                    module=FeedForwardModule(
-                        encoder_dim=encoder_dim,
-                        expansion_factor=feed_forward_expansion_factor,
-                        dropout_p=feed_forward_dropout_p
-                    ),
-                    module_factor=self.feed_forward_residual_factor,
-                ))
+            )
+        )
+        modules.append(
+            ResidualConnectionModule(
+                module=FeedForwardModule(
+                    encoder_dim=encoder_dim,
+                    expansion_factor=feed_forward_expansion_factor,
+                    dropout_p=feed_forward_dropout_p,
+                ),
+                module_factor=self.feed_forward_residual_factor,
+            )
+        )
         modules.append(nn.LayerNorm(encoder_dim))
         self.sequential = nn.Sequential(*modules)
 
@@ -151,23 +163,24 @@ class ConformerEncoder(pl.LightningModule):
         - **outputs** (batch, out_channels, time): Tensor produces by conformer encoder.
         - **output_lengths** (batch): list of sequence output lengths
     """
+
     def __init__(
-            self,
-            input_dim: int = 80,
-            encoder_dim: int = 512,
-            num_layers: int = 17,
-            num_attention_heads: int = 8,
-            feed_forward_expansion_factor: int = 4,
-            conv_expansion_factor: int = 2,
-            input_dropout_p: float = 0.1,
-            feed_forward_dropout_p: float = 0.1,
-            attention_dropout_p: float = 0.1,
-            crossmodal_dropout_p=0.1,
-            conv_dropout_p: float = 0.1,
-            conv_kernel_size: int = 31,
-            half_step_residual: bool = True,
-            use_crossmodal_layer=False,
-            use_visual_pe=False
+        self,
+        input_dim: int = 80,
+        encoder_dim: int = 512,
+        num_layers: int = 17,
+        num_attention_heads: int = 8,
+        feed_forward_expansion_factor: int = 4,
+        conv_expansion_factor: int = 2,
+        input_dropout_p: float = 0.1,
+        feed_forward_dropout_p: float = 0.1,
+        attention_dropout_p: float = 0.1,
+        crossmodal_dropout_p=0.1,
+        conv_dropout_p: float = 0.1,
+        conv_kernel_size: int = 31,
+        half_step_residual: bool = True,
+        use_crossmodal_layer=False,
+        use_visual_pe=False,
     ):
         super(ConformerEncoder, self).__init__()
         # self.conv_subsample = Conv2dSubampling(in_channels=1, out_channels=encoder_dim)
@@ -175,31 +188,38 @@ class ConformerEncoder(pl.LightningModule):
             Linear(input_dim, encoder_dim),
             nn.Dropout(p=input_dropout_p),
         )
-        self.layers = nn.ModuleList([ConformerBlock(
-            encoder_dim=encoder_dim,
-            num_attention_heads=num_attention_heads,
-            feed_forward_expansion_factor=feed_forward_expansion_factor,
-            conv_expansion_factor=conv_expansion_factor,
-            feed_forward_dropout_p=feed_forward_dropout_p,
-            attention_dropout_p=attention_dropout_p,
-            crossmodal_dropout_p=crossmodal_dropout_p,
-            conv_dropout_p=conv_dropout_p,
-            conv_kernel_size=conv_kernel_size,
-            use_crossmodal_layer=use_crossmodal_layer,
-            use_visual_pe=use_visual_pe
-        ) for _ in range(num_layers)])
+        self.layers = nn.ModuleList(
+            [
+                ConformerBlock(
+                    encoder_dim=encoder_dim,
+                    num_attention_heads=num_attention_heads,
+                    feed_forward_expansion_factor=feed_forward_expansion_factor,
+                    conv_expansion_factor=conv_expansion_factor,
+                    feed_forward_dropout_p=feed_forward_dropout_p,
+                    attention_dropout_p=attention_dropout_p,
+                    crossmodal_dropout_p=crossmodal_dropout_p,
+                    conv_dropout_p=conv_dropout_p,
+                    conv_kernel_size=conv_kernel_size,
+                    use_crossmodal_layer=use_crossmodal_layer,
+                    use_visual_pe=use_visual_pe,
+                )
+                for _ in range(num_layers)
+            ]
+        )
 
     def count_parameters(self) -> int:
-        """ Count parameters of encoder """
+        """Count parameters of encoder"""
         return sum([p.numel for p in self.parameters()])
 
     def update_dropout(self, dropout_p: float) -> None:
-        """ Update dropout probability of encoder """
+        """Update dropout probability of encoder"""
         for name, child in self.named_children():
             if isinstance(child, nn.Dropout):
                 child.p = dropout_p
 
-    def forward(self, inputs: Tensor, input_lengths: Tensor = None, img_feat=None) -> Tuple[Tensor, Tensor]:
+    def forward(
+        self, inputs: Tensor, input_lengths: Tensor = None, img_feat=None
+    ) -> Tuple[Tensor, Tensor]:
         """
         Forward propagate a `inputs` for  encoder training.
 

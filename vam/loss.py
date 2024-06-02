@@ -25,12 +25,12 @@ def stft(x, fft_size, hop_size, win_length, window):
         Tensor: Magnitude spectrogram (B, #frames, fft_size // 2 + 1).
     """
     window = window.to(x.device)
-    x_stft = torch.stft(x, fft_size, hop_size, win_length, window, pad_mode='constant')
+    x_stft = torch.stft(x, fft_size, hop_size, win_length, window, pad_mode="constant")
     real = x_stft[..., 0]
     imag = x_stft[..., 1]
 
     # NOTE(kan-bayashi): clamp is needed to avoid nan or inf
-    return torch.sqrt(torch.clamp(real ** 2 + imag ** 2, min=1e-7)).transpose(2, 1)
+    return torch.sqrt(torch.clamp(real**2 + imag**2, min=1e-7)).transpose(2, 1)
 
 
 class SpectralConvergenceLoss(nn.Module):
@@ -90,13 +90,17 @@ class STFTMagnitudeLoss(nn.Module):
 class LogMagSTFTLoss(nn.Module):
     """STFT loss module."""
 
-    def __init__(self, fft_size=1024, shift_size=120, win_length=600, window="hann_window"):
+    def __init__(
+        self, fft_size=1024, shift_size=120, win_length=600, window="hann_window"
+    ):
         """Initialize STFT loss module."""
         super(LogMagSTFTLoss, self).__init__()
         self.fft_size = fft_size
         self.shift_size = shift_size
         self.win_length = win_length
-        self.register_buffer("window", getattr(torch, window)(win_length), persistent=False)
+        self.register_buffer(
+            "window", getattr(torch, window)(win_length), persistent=False
+        )
 
     def forward(self, x, y):
         """Calculate forward propagation.
@@ -108,10 +112,24 @@ class LogMagSTFTLoss(nn.Module):
             Tensor: Log STFT magnitude loss value.
         """
         window = self.window.to(x.device)
-        mag_x = torch.stft(x, self.fft_size, self.shift_size, self.win_length, window, return_complex=True,
-                           pad_mode='constant').abs()
-        mag_y = torch.stft(y, self.fft_size, self.shift_size, self.win_length, window, return_complex=True,
-                           pad_mode='constant').abs()
+        mag_x = torch.stft(
+            x,
+            self.fft_size,
+            self.shift_size,
+            self.win_length,
+            window,
+            return_complex=True,
+            pad_mode="constant",
+        ).abs()
+        mag_y = torch.stft(
+            y,
+            self.fft_size,
+            self.shift_size,
+            self.win_length,
+            window,
+            return_complex=True,
+            pad_mode="constant",
+        ).abs()
         loss = F.mse_loss(torch.log1p(mag_x), torch.log1p(mag_y))
 
         return loss
@@ -120,13 +138,17 @@ class LogMagSTFTLoss(nn.Module):
 class STFTLoss(nn.Module):
     """STFT loss module."""
 
-    def __init__(self, fft_size=1024, shift_size=120, win_length=600, window="hann_window"):
+    def __init__(
+        self, fft_size=1024, shift_size=120, win_length=600, window="hann_window"
+    ):
         """Initialize STFT loss module."""
         super(STFTLoss, self).__init__()
         self.fft_size = fft_size
         self.shift_size = shift_size
         self.win_length = win_length
-        self.register_buffer("window", getattr(torch, window)(win_length), persistent=False)
+        self.register_buffer(
+            "window", getattr(torch, window)(win_length), persistent=False
+        )
         self.spectral_convergence_loss = SpectralConvergenceLoss()
         self.log_stft_magnitude_loss = LogSTFTMagnitudeLoss()
         self.factor = fft_size / 2048
@@ -174,7 +196,7 @@ class MultiResolutionSTFTLoss(nn.Module):
         assert len(fft_sizes) == len(hop_sizes) == len(win_lengths)
         self.stft_losses = torch.nn.ModuleList()
         for fs, ss, wl in zip(fft_sizes, hop_sizes, win_lengths):
-            self.stft_losses += [STFTLoss(fs, ss, wl, 'hamming_window')]
+            self.stft_losses += [STFTLoss(fs, ss, wl, "hamming_window")]
 
     def forward(self, x, y):
         """Calculate forward propagation.
@@ -206,9 +228,9 @@ class LossFunc(nn.Module):
     def __init__(self, cfg):
         super(LossFunc, self).__init__()
 
-        if cfg['loss_mode'] == 'STFT':
+        if cfg["loss_mode"] == "STFT":
             self.STFTLoss = STFTLoss()
-        elif cfg['loss_mode'] == 'MRSTFT':
+        elif cfg["loss_mode"] == "MRSTFT":
             self.STFTLoss = MultiResolutionSTFTLoss(cfg)
 
     def forward(self, outputs, label):
@@ -218,14 +240,14 @@ class LossFunc(nn.Module):
         return stft_loss[0] + stft_loss[1]
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     import yaml
 
-    cfg_path = r'config/config.yaml'
-    cfg = yaml.load(open(cfg_path, 'r'), Loader=yaml.FullLoader)
+    cfg_path = r"config/config.yaml"
+    cfg = yaml.load(open(cfg_path, "r"), Loader=yaml.FullLoader)
 
     outputs = torch.rand([5, 1, 16384])
     label = torch.rand([5, 1, 16384])
-    loss_fun = LossFunc(cfg['hparas']['loss'])
+    loss_fun = LossFunc(cfg["hparas"]["loss"])
     loss = loss_fun(outputs, label)
     pass

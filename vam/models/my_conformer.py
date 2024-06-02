@@ -46,30 +46,31 @@ class Conformer(pl.LightningModule):
         - **outputs** (batch, out_channels, time): Tensor produces by conformer.
         - **output_lengths** (batch): list of sequence output lengths
     """
+
     def __init__(
-            self,
-            input_dim: int = 80,
-            encoder_dim: int = 512,
-            num_encoder_layers: int = 17,
-            num_attention_heads: int = 8,
-            feed_forward_expansion_factor: int = 4,
-            conv_expansion_factor: int = 2,
-            input_dropout_p: float = 0.1,
-            feed_forward_dropout_p: float = 0.1,
-            attention_dropout_p: float = 0.1,
-            crossmodal_dropout_p=0.1,
-            conv_dropout_p: float = 0.1,
-            conv_kernel_size: int = 31,
-            half_step_residual: bool = True,
-            use_crossmodal_layer=False,
-            decode_wav=False,
-            encode_wav=False,
-            encoder_ratios="8,4,2,2",
-            decoder_ratios="8,4,2,2",
-            encoder_residual_layers=3,
-            decoder_residual_layers=3,
-            ngf=32,
-            use_visual_pe=False
+        self,
+        input_dim: int = 80,
+        encoder_dim: int = 512,
+        num_encoder_layers: int = 17,
+        num_attention_heads: int = 8,
+        feed_forward_expansion_factor: int = 4,
+        conv_expansion_factor: int = 2,
+        input_dropout_p: float = 0.1,
+        feed_forward_dropout_p: float = 0.1,
+        attention_dropout_p: float = 0.1,
+        crossmodal_dropout_p=0.1,
+        conv_dropout_p: float = 0.1,
+        conv_kernel_size: int = 31,
+        half_step_residual: bool = True,
+        use_crossmodal_layer=False,
+        decode_wav=False,
+        encode_wav=False,
+        encoder_ratios="8,4,2,2",
+        decoder_ratios="8,4,2,2",
+        encoder_residual_layers=3,
+        decoder_residual_layers=3,
+        ngf=32,
+        use_visual_pe=False,
     ) -> None:
         super(Conformer, self).__init__()
         self.encoder = ConformerEncoder(
@@ -87,48 +88,56 @@ class Conformer(pl.LightningModule):
             conv_kernel_size=conv_kernel_size,
             half_step_residual=half_step_residual,
             use_crossmodal_layer=use_crossmodal_layer,
-            use_visual_pe=use_visual_pe
+            use_visual_pe=use_visual_pe,
         )
         if encode_wav:
-            self.audio_encoder = AudioEncoder(input_size=1, ngf=ngf, n_residual_layers=encoder_residual_layers,
-                                              ratios=encoder_ratios)
+            self.audio_encoder = AudioEncoder(
+                input_size=1,
+                ngf=ngf,
+                n_residual_layers=encoder_residual_layers,
+                ratios=encoder_ratios,
+            )
         else:
             self.audio_encoder = None
         if decode_wav:
-            self.decoder = Generator(input_size=512, ngf=ngf, n_residual_layers=decoder_residual_layers,
-                                     ratios=decoder_ratios)
+            self.decoder = Generator(
+                input_size=512,
+                ngf=ngf,
+                n_residual_layers=decoder_residual_layers,
+                ratios=decoder_ratios,
+            )
         else:
             self.decoder = nn.Linear(encoder_dim, input_dim)
 
     def set_encoder(self, encoder):
-        """ Setter for encoder """
+        """Setter for encoder"""
         self.encoder = encoder
 
     def set_decoder(self, decoder):
-        """ Setter for decoder """
+        """Setter for decoder"""
         self.decoder = decoder
 
     def count_parameters(self) -> int:
-        """ Count parameters of encoder """
+        """Count parameters of encoder"""
         num_audio_encoder_parameters = self.audio_encoder.count_parameters()
         num_encoder_parameters = self.encoder.count_parameters()
         num_decoder_parameters = self.decoder.count_parameters()
         num_stop_classifier_parameters = self.rt60_predictor.count_parameters()
-        return num_audio_encoder_parameters + num_encoder_parameters + num_decoder_parameters + num_stop_classifier_parameters
+        return (
+            num_audio_encoder_parameters
+            + num_encoder_parameters
+            + num_decoder_parameters
+            + num_stop_classifier_parameters
+        )
 
     def update_dropout(self, dropout_p) -> None:
-        """ Update dropout probability of model """
+        """Update dropout probability of model"""
         self.audio_encoder.update_dropout(dropout_p)
         self.encoder.update_dropout(dropout_p)
         self.decoder.update_dropout(dropout_p)
         self.rt60_predictor.update_dropout(dropout_p)
 
-    def forward(
-            self,
-            inputs: Tensor,
-            input_lengths: Tensor = None,
-            img_feat = None
-    ):
+    def forward(self, inputs: Tensor, input_lengths: Tensor = None, img_feat=None):
         """
         Forward propagate a `inputs` and `targets` pair for training.
 
@@ -155,7 +164,7 @@ class Conformer(pl.LightningModule):
         loss = F.mse_loss(tgt_pred, tgt)
 
         # Logging to TensorBoard by default
-        self.log('train_loss', loss)
+        self.log("train_loss", loss)
         return loss
 
     def validation_step(self, batch, batch_idx):
@@ -165,7 +174,7 @@ class Conformer(pl.LightningModule):
         loss = F.mse_loss(tgt_pred, tgt)
 
         # Logging to TensorBoard by default
-        self.log('val_loss', loss)
+        self.log("val_loss", loss)
         return loss
 
     def dereverb(self, batch, batch_idx):
@@ -173,8 +182,8 @@ class Conformer(pl.LightningModule):
         # It is independent of forward
         for key, value in batch.items():
             batch[key] = value.to(device=self.device, dtype=torch.float)
-        receiver_spec = batch['recv_spec']
-        source_spec = batch['src_spec']
+        receiver_spec = batch["recv_spec"]
+        source_spec = batch["src_spec"]
 
         receiver_spec[..., 0] = torch.log1p(receiver_spec[..., 0])
         source_spec[..., 0] = torch.log1p(source_spec[..., 0])

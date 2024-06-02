@@ -69,7 +69,7 @@ class Audio2Mel(nn.Module):
             center=False,
         )
         real_part, imag_part = fft.unbind(-1)
-        magnitude = torch.sqrt(real_part ** 2 + imag_part ** 2)
+        magnitude = torch.sqrt(real_part**2 + imag_part**2)
         mel_output = torch.matmul(self.mel_basis, magnitude)
         log_mel_spec = torch.log10(torch.clamp(mel_output, min=1e-5))
         return log_mel_spec
@@ -94,7 +94,7 @@ class ResnetBlock(nn.Module):
 class Generator(nn.Module):
     def __init__(self, input_size, ngf, n_residual_layers, ratios="8,4,2,2"):
         super().__init__()
-        ratios = [int(x) for x in ratios.split(',')]
+        ratios = [int(x) for x in ratios.split(",")]
         self.hop_length = np.prod(ratios)
         mult = int(2 ** len(ratios))
 
@@ -118,7 +118,7 @@ class Generator(nn.Module):
             ]
 
             for j in range(n_residual_layers):
-                model += [ResnetBlock(mult * ngf // 2, dilation=3 ** j)]
+                model += [ResnetBlock(mult * ngf // 2, dilation=3**j)]
 
             mult //= 2
 
@@ -140,7 +140,7 @@ class Generator(nn.Module):
 class AudioEncoder(nn.Module):
     def __init__(self, input_size, ngf, n_residual_layers, ratios="8,4,2,2"):
         super().__init__()
-        ratios = [int(x) for x in ratios.split(',')]
+        ratios = [int(x) for x in ratios.split(",")]
         self.hop_length = np.prod(ratios)
         # mult = int(2 ** len(ratios))
         mult = 1
@@ -164,7 +164,7 @@ class AudioEncoder(nn.Module):
             ]
 
             for j in range(n_residual_layers):
-                model += [ResnetBlock(mult * ngf * 2, dilation=3 ** j)]
+                model += [ResnetBlock(mult * ngf * 2, dilation=3**j)]
 
             mult *= 2
 
